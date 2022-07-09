@@ -41,8 +41,8 @@ class BaseLiveStream(Base):
         self.start_time: datetime = datetime.fromtimestamp(
             int(data["startTime"]) / 1000
         )
-        self.trailerUrl: str | None = data["trailerUrl"]
-        self.trailerThumbnailUrl: str | None = data["trailerThumbnailUrl"]
+        self.trailer_url: str | None = data["trailerUrl"]
+        self.trailer_thumbnail_url: str | None = data["trailerThumbnailUrl"]
 
     def __repr__(self) -> str:
         return f"<BaseLiveStream id={self.id!r} title={self.title!r}>"
