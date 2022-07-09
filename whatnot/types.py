@@ -11,7 +11,16 @@ class Base:
 
 
 class BaseUser(Base):
-    pass
+    def _from_data(self, data: dict) -> None:
+        self.id: str = data["id"]
+        self.username: str = data["username"]
+        self.follower_count: str = data["followerCount"]
+        self.is_verified_seller: bool = data["isVerifiedSeller"]
+        self.profile_image: dict = data[
+            "profileImage"
+        ]  # Todo: auto-convert this to a URL
+        self.seller_rating: dict = data["sellerRating"]
+        self.user_following: bool = data["userFollowing"]
 
 
 class CategoryNode(Base):
