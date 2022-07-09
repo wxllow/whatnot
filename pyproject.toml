@@ -4,9 +4,23 @@ version = "0.1.0"
 description = "An asynchronous, unofficial Whatnot API wrapper"
 authors = ["wxllow <willow@wxllow.dev>"]
 license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/wxllow/whatnot"
+repository = "https://github.com/wxllow/whatnot"
+keywords = ["whatnot", "api", "async"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: AsyncIO",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Documentation",
+]
+include = [
+    "LICENSE",
+]
 
 [tool.poetry.dependencies]
-python = ">=3.9, <3.11"
+python = "^3.9"
 gql = "^3.3.0"
 aiohttp = "^3.8.1"
 

@@ -2,6 +2,8 @@
 cookie_jar.pickle
 session.json
 
+*.ignore.*
+
 ### macOS ###
 .DS_Store
 .AppleDouble
