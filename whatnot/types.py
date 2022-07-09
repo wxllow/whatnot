@@ -22,11 +22,17 @@ class BaseUser(Base):
         self.seller_rating: dict = data["sellerRating"]
         self.user_following: bool = data["userFollowing"]
 
+    def __repr__(self) -> str:
+        return f"<BaseUser {self.username!r}>"
+
 
 class CategoryNode(Base):
     def _from_data(self, data: dict) -> None:
         self.id: str = data["id"]
         self.label: str = data["label"]
+
+    def __repr__(self) -> str:
+        return f"<CategoryNode {self.label!r}>"
 
 
 class BaseLiveStream(Base):

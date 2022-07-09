@@ -1,4 +1,5 @@
 from typing import Union
+import logging
 import json
 
 import aiohttp
@@ -8,6 +9,17 @@ from gql.transport.aiohttp import AIOHTTPTransport
 from .utils import *
 from .exceptions import *
 from .types import *
+
+
+try:
+    from bs4 import BeautifulSoup
+
+    HAS_BS4 = True
+except ImportError:
+    logging.warn(
+        "Optional dependency beautifulsoup4 is not available, some functionality will be unavailable."
+    )
+    HAS_BS4 = False
 
 
 class Whatnot:
@@ -20,7 +32,11 @@ class Whatnot:
         )
 
         # HTTP session
-        self.session = aiohttp.ClientSession()
+        self.session = aiohttp.ClientSession(
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36"
+            }
+        )
 
         self.access_token = None
         self.user_id = None
@@ -101,8 +117,29 @@ class Whatnot:
 
     """Users"""
 
-    async def get_user(self, user_id: str) -> dict:
-        pass
+    async def get_user_id(self, username: str) -> dict:
+        """Get a user's id by their username (requires beautifulsoup4)"""
+        if not HAS_BS4:
+            raise ImportError("beautifulsoup4 not available")
+
+        url = f"{base_url}/user/{username}"
+
+        async with self.session.get(url) as resp:
+            resp.raise_for_status()
+
+            soup = BeautifulSoup(await resp.text(), "html.parser")
+
+        head = soup.find("head")
+        script = soup.find_all("script")[2].text
+        loc = script.find('"key":"users/')
+
+        if loc == -1:
+            raise Exception("Cannot find ID from username!")
+
+        return script[loc:].split("/")[1]
+
+    # async def get_user(self, user_id: str) -> dict:
+    #     pass
 
     async def get_user_lives(self, user_id: str, first: int = 6) -> list:
         """Get a user's lives by their id"""
