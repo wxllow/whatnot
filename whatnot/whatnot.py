@@ -66,7 +66,7 @@ class Whatnot:
         async with self.session.post(
             f"{api_url}/login",
             json={
-                # "device_id": "aea87c97-aaba-4426-ae44-d3db92e188d9", # Dkn't know what this is exactly, but the API doesn't seem to care
+                # "device_id": "aea87c97-aaba-4426-ae44-d3db92e188d9", # Don't know what this is exactly, but the API doesn't seem to care
                 "username": username,
                 "password": password,
             },
@@ -86,7 +86,7 @@ class Whatnot:
                 else:
                     raise AuthenticationError("Email verification required")
             else:
-                raise Exception("Unimplemented verification method:")
+                raise NotImplementedError("Unimplemented verification method:")
 
     async def load_session(self) -> None:
         """Load a saved session"""
@@ -134,7 +134,7 @@ class Whatnot:
         loc = script.find('"key":"users/')
 
         if loc == -1:
-            raise Exception("Cannot find ID from username!")
+            raise KeyError("Cannot find ID from username!")
 
         return script[loc:].split("/")[1]
 
