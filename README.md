@@ -19,7 +19,18 @@ Very early work-in-progress asynchronous API wrapper for and documentation of th
 ## Example
 
 ```python
-code
+import asyncio
+from whatnot import Whatnot
+
+async def main():
+    whatnot = Whatnot()
+    whatnot.login("bob@example.com", "secret_password")
+    
+    lives = whatnot.get_user_lives(whatnot.get_user_id("whatnot"))
+    
+    print(f"User has {len(lives)} upcoming/active lives!")
+    
+asyncio.run(main())
 ```
 
 ## Disclaimer
