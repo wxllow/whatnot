@@ -111,7 +111,7 @@ class Whatnot:
         return (await self.get_user(username)).id
 
     async def get_user(self, username: str) -> dict:
-        """Get a user's lives by their id"""
+        """Get a user by their username"""
         query = gql(
             """
             query GetUser($username: String) {
@@ -144,6 +144,47 @@ class Whatnot:
             await self.client.execute_async(
                 query,
                 variable_values={"username": username},
+            )
+        )["getUser"]
+
+        result.update({"id": b64decode(result["id"]).decode("utf-8").split(":", 1)[1]})
+
+        return User(result)
+
+    async def get_user_by_id(self, id_: str) -> dict:
+        """Get a user by their id"""
+        query = gql(
+            """
+            query GetUser($id: ID) {
+                getUser(id: $id) {
+                        id
+                        username
+                        userFollowing
+                        followerCount
+                        followingCount
+                        averageShipDays
+                        isVerifiedSeller
+                        canBeMessagedByMe
+                        profileImage {
+                            id
+                            bucket
+                            key
+                        }
+                        bio
+                        soldCount
+                        sellerRating {
+                            overall
+                            numReviews
+                        }
+                    }
+            }
+            """
+        )
+
+        result = (
+            await self.client.execute_async(
+                query,
+                variable_values={"id": id_},
             )
         )["getUser"]
 
