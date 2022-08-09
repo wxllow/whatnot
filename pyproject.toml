@@ -26,7 +26,6 @@ aiohttp = "^3.8.1"
 
 [tool.poetry.dev-dependencies]
 black = {version = "^22.6.0", allow-prereleases = true}
-beautifulsoup4 = "^4.11.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

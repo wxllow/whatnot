@@ -5,21 +5,10 @@ import json
 import aiohttp
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
-
+from base64 import b64decode
 from .utils import *
 from .exceptions import *
 from .types import *
-
-
-try:
-    from bs4 import BeautifulSoup
-
-    HAS_BS4 = True
-except ImportError:
-    logging.warn(
-        "Optional dependency beautifulsoup4 is not available, some functionality will be unavailable."
-    )
-    HAS_BS4 = False
 
 
 class Whatnot:
@@ -119,27 +108,48 @@ class Whatnot:
 
     async def get_user_id(self, username: str) -> dict:
         """Get a user's id by their username (requires beautifulsoup4)"""
-        if not HAS_BS4:
-            raise ImportError("beautifulsoup4 not available")
+        return (await self.get_user(username)).id
 
-        url = f"{base_url}/user/{username}"
+    async def get_user(self, username: str) -> dict:
+        """Get a user's lives by their id"""
+        query = gql(
+            """
+            query GetUser($username: String) {
+                getUser(username: $username) {
+                        id
+                        username
+                        userFollowing
+                        followerCount
+                        followingCount
+                        averageShipDays
+                        isVerifiedSeller
+                        canBeMessagedByMe
+                        profileImage {
+                            id
+                            bucket
+                            key
+                        }
+                        bio
+                        soldCount
+                        sellerRating {
+                            overall
+                            numReviews
+                        }
+                    }
+            }
+            """
+        )
 
-        async with self.session.get(url) as resp:
-            resp.raise_for_status()
+        result = (
+            await self.client.execute_async(
+                query,
+                variable_values={"username": username},
+            )
+        )["getUser"]
 
-            soup = BeautifulSoup(await resp.text(), "html.parser")
+        result.update({"id": b64decode(result["id"]).decode("utf-8").split(":", 1)[1]})
 
-        head = soup.find("head")
-        script = soup.find_all("script")[2].text
-        loc = script.find('"key":"users/')
-
-        if loc == -1:
-            raise KeyError("Cannot find ID from username!")
-
-        return script[loc:].split("/")[1]
-
-    # async def get_user(self, user_id: str) -> dict:
-    #     pass
+        return User(result)
 
     async def get_user_lives(self, user_id: str, first: int = 6) -> list:
         """Get a user's lives by their id"""

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from .utils import LiveStatuses
 
 
@@ -24,6 +25,19 @@ class BaseUser(Base):
 
     def __repr__(self) -> str:
         return f"<BaseUser {self.username!r}>"
+
+
+class User(BaseUser):
+    def _from_data(self, data: dict) -> None:
+        super()._from_data(data)
+        self.average_ship_days: Optional[str] = data["averageShipDays"]
+        self.bio: Optional[str] = data["bio"]
+        self.can_be_messaged_by_me: bool = data["canBeMessagedByMe"]
+        self.following_count: int = data["followingCount"]
+        self.sold_count: int = data["soldCount"]
+
+    def __repr__(self) -> str:
+        return f"<User {self.username!r}>"
 
 
 class CategoryNode(Base):

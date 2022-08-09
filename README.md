@@ -8,7 +8,7 @@ Very early work-in-progress asynchronous API wrapper for and documentation of th
 - [x] Get user's livestreams
 - [x] Get a livestream
 - [ ] Get user by ID
-- [ ] Get user by username
+- [x] Get user by username
 - [ ] Get account information
 - [ ] Get Explore/Recommendations/Saved Streams/etc
 
