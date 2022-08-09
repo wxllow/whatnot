@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from .utils import LiveStatuses
 
@@ -59,7 +59,7 @@ class BaseLiveStream(Base):
         self.title: str = data["title"]
         self.status = LiveStatuses(data["status"])
         self.start_time: datetime = datetime.fromtimestamp(
-            int(data["startTime"]) / 1000
+            int(data["startTime"]) / 1000, tz=timezone.utc
         )
         self.trailer_url: str | None = data["trailerUrl"]
         self.trailer_thumbnail_url: str | None = data["trailerThumbnailUrl"]
