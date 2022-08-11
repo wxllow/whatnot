@@ -1,14 +1,26 @@
-from typing import Union
-import logging
 import json
+from base64 import b64decode
+from typing import Union
 
 import aiohttp
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
-from base64 import b64decode
-from .utils import *
-from .exceptions import *
+
+from . import queries
+from .exc import *
 from .types import *
+from .utils import *
+
+
+# Authentication decorator
+def login_required(func) -> callable:
+    def wrapper(self, *args, **kwargs) -> None:
+        if not (self.access_token and self.user_id):
+            raise AuthenticationError("Not logged in")
+
+        func(self, *args, **kwargs)
+
+    return wrapper
 
 
 class Whatnot:
@@ -30,8 +42,34 @@ class Whatnot:
         self.access_token = None
         self.user_id = None
 
-    # Authentication
+    async def __aenter__(self) -> "Whatnot":
+        """Enter the context manager"""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.close()
+
+    async def close(self) -> None:
+        """Close the session"""
+        await self.session.close()
+
+    async def _req(self, query: str, variables: Optional[dict] = None) -> dict:
+        """Make a request to the GraphQL endpoint"""
+        return await self.client.execute_async(gql(query), variable_values=variables)
+
+    def __repr__(self) -> str:
+        return f"<Whatnot user_id={self.user_id!r})>"
+
+    """Authentication"""
+
+    async def login_with_access_token(self, access_token: str, user_id: str) -> None:
+        """Login using an access token"""
+        self.access_token = access_token
+        self.user_id = user_id
+        self.transport.headers = {"Authorization": f"Bearer {self.access_token}"}
+
     async def _verify_email(self, token: str, code: Union[str, int]) -> None:
+        """Handles email verification"""
         async with self.session.post(
             f"{api_url}/verify",
             json={
@@ -43,13 +81,10 @@ class Whatnot:
             resp.raise_for_status()
             data = await resp.json()
 
-            self.access_token = data["access_token"]
-            self.user_id = data["user_id"]
-
-            self.transport.headers = {"Authorization": f"Bearer {self.access_token}"}
+            await self.login_with_access_token(data["access_token"], data["user_id"])
 
     async def login(
-        self, username: str, password: str, interaction: bool = True
+        self, username: str, password: str, interaction: bool = False
     ) -> None:
         """Log in using a email and password"""
         async with self.session.post(
@@ -67,15 +102,24 @@ class Whatnot:
 
             data = await resp.json()
 
-            if data.get("verification_method") == "email":
-                if interaction:
-                    i = input("Email verification required. Enter code: ")
+            verification_method = data.get("verification_method")
 
-                    await self._verify_email(data["verification_token"], i)
-                else:
+            if not verification_method:
+                return await self.login_with_access_token(
+                    data["access_token"], data["user_id"]
+                )
+
+            if verification_method == "email":
+                if not interaction:
                     raise AuthenticationError("Email verification required")
+
+                i = input("Email verification required. Enter code: ")
+
+                await self._verify_email(data["verification_token"], i)
             else:
-                raise NotImplementedError("Unimplemented verification method:")
+                raise NotImplementedError(
+                    f"Unimplemented verification method: {data.get('verification_method')}"
+                )
 
     async def load_session(self) -> None:
         """Load a saved session"""
@@ -84,8 +128,6 @@ class Whatnot:
 
             self.access_token = data["access_token"]
             self.user_id = data["user_id"]
-
-        self.session.cookie_jar.load("cookie_jar.pickle")
 
         self.transport.headers = {"Authorization": f"Bearer {self.access_token}"}
 
@@ -100,9 +142,11 @@ class Whatnot:
                 f,
             )
 
-        self.session.cookie_jar.save("cookie_jar.pickle")
-
     """Account Info"""
+
+    @login_required
+    async def me(self) -> dict:
+        pass
 
     """Users"""
 
@@ -112,126 +156,55 @@ class Whatnot:
 
     async def get_user(self, username: str) -> dict:
         """Get a user by their username"""
-        query = gql(
+        query = (
             """
-            query GetUser($username: String) {
-                getUser(username: $username) {
-                        id
-                        username
-                        userFollowing
-                        followerCount
-                        followingCount
-                        averageShipDays
-                        isVerifiedSeller
-                        canBeMessagedByMe
-                        profileImage {
-                            id
-                            bucket
-                            key
-                        }
-                        bio
-                        soldCount
-                        sellerRating {
-                            overall
-                            numReviews
-                        }
-                    }
-            }
-            """
+                query GetUser($username: String) {
+                    getUser(username: $username) {
+                """
+            + queries.USER_QUERY
+            + "}}"
         )
 
-        result = (
-            await self.client.execute_async(
-                query,
-                variable_values={"username": username},
-            )
-        )["getUser"]
-
+        result = (await self._req(query, {"username": username}))["getUser"]
         result.update({"id": b64decode(result["id"]).decode("utf-8").split(":", 1)[1]})
-
         return User(result)
 
     async def get_user_by_id(self, id_: str) -> dict:
         """Get a user by their id"""
-        query = gql(
+        query = (
             """
             query GetUser($id: ID) {
                 getUser(id: $id) {
-                        id
-                        username
-                        userFollowing
-                        followerCount
-                        followingCount
-                        averageShipDays
-                        isVerifiedSeller
-                        canBeMessagedByMe
-                        profileImage {
-                            id
-                            bucket
-                            key
-                        }
-                        bio
-                        soldCount
-                        sellerRating {
-                            overall
-                            numReviews
-                        }
-                    }
-            }
             """
+            + queries.USER_QUERY
+            + "}}"
         )
 
-        result = (
-            await self.client.execute_async(
-                query,
-                variable_values={"id": id_},
-            )
-        )["getUser"]
-
+        result = (await self._req(query, {"id": id_}))["getUser"]
         result.update({"id": b64decode(result["id"]).decode("utf-8").split(":", 1)[1]})
-
         return User(result)
 
     async def get_user_lives(self, user_id: str, first: int = 6) -> list:
         """Get a user's lives by their id"""
-        query = gql(
+        query = (
             """
             query GetUserLiveStreams($userId: ID!, $first: Int) {
                 searchLivestreams(userIds: [$userId], first: $first) {
                     edges {
                         node {
-                            ... on LiveStream {
-                                id
-                                status
-                                trailerUrl
-                                trailerThumbnailUrl
-                                title
-                                startTime
-                                categories
-                                categoryNodes {
-                                    id
-                                    label
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            """
+                            ... on LiveStream {"""
+            + queries.LIVE_QUERY
+            + "}}}}}"
         )
 
-        result = await self.client.execute_async(
-            query,
-            variable_values={"first": first, "userId": user_id},
-        )
-
-        return [UserLiveStream(i["node"]) for i in result["searchLivestreams"]["edges"]]
+        result = await self._req(query, {"first": first, "userId": user_id})
+        return [LiveStream(i["node"]) for i in result["searchLivestreams"]["edges"]]
 
     """Lives"""
 
     async def get_live(self, id_: str) -> dict:
         """Get a livestream by ID"""
-        query = gql(
+        query = (
             """
             query GetLivestreamContext($id: ID!, $userId: ID) {
                 liveStream(id: $id) {
@@ -239,55 +212,12 @@ class Whatnot:
                 }
             }
 
-            fragment LivestreamFragment on LiveStream {
-                id
-                status
-                trailerUrl
-                trailerThumbnailUrl
-                title
-                startTime
-                pinnedProductId
-                activeViewers
-                categories
-                categoryNodes {
-                    id
-                    label
-                }
-                totalWatchlistUsers
-                isSellerInternationalToBuyer
-                streamToken
-                user {
-                    id
-                    username
-                    followerCount
-                    userFollowing
-                    profileImage {
-                        id
-                        bucket
-                        key
-                    }
-                    isVerifiedSeller
-                    sellerRating {
-                        overall
-                        numReviews
-                    }
-                }
-                isUserBanned
-                isUserModerator(userId: $userId)
-                nominatedModerators {
-                    id
-                }
-                explicitContent
-                isHiddenBySeller
-            }
-            """
+            fragment LivestreamFragment on LiveStream {"""
+            + queries.LIVE_QUERY
+            + "}"
         )
 
-        result = await self.client.execute_async(
-            query,
-            variable_values={"id": id_, "userId": self.user_id},
-        )
-
+        result = await self._req(query, {"id": id_, "userId": self.user_id})
         return LiveStream(result["liveStream"])
 
     """Recommendations/Saved Streams/etcs"""
