@@ -23,13 +23,22 @@ import asyncio
 from whatnot import Whatnot
 
 async def main():
-    whatnot = Whatnot()
-    whatnot.login("bob@example.com", "secret_password")
-    
-    lives = whatnot.get_user_lives(whatnot.get_user_id("whatnot"))
-    
-    print(f"User has {len(lives)} upcoming/active lives!")
-    
+    async with Whatnot() as whatnot:
+        whatnot.login("bob@example.com", "secret_password")
+
+        # Get the whatnot account
+        whatnot_user = await whatnot.get_user("whatnot")
+        # OR
+        # whatnot_user = await whatnot.get_user_by_id("21123")
+
+        # Get user's lives
+        lives = await whatnot.get_user_lives(whatnot_user.id)
+
+        # Print out all of the lives
+        for l in [live.id for live in lives]:
+            print(l)
+
+
 asyncio.run(main())
 ```
 

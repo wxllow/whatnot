@@ -1,5 +1,4 @@
 # Whatnotapi specific
-cookie_jar.pickle
 session.json
 
 *.ignore.*

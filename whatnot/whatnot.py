@@ -1,6 +1,6 @@
 import json
-from base64 import b64decode
-from typing import Union
+from functools import wraps
+from typing import Any, Union
 
 import aiohttp
 from gql import Client, gql
@@ -14,11 +14,12 @@ from .utils import *
 
 # Authentication decorator
 def login_required(func) -> callable:
-    def wrapper(self, *args, **kwargs) -> None:
+    @wraps(func)
+    def wrapper(self, *args, **kwargs) -> Any:
         if not (self.access_token and self.user_id):
             raise AuthenticationError("Not logged in")
 
-        func(self, *args, **kwargs)
+        return func(self, *args, **kwargs)
 
     return wrapper
 
@@ -68,8 +69,8 @@ class Whatnot:
         self.user_id = user_id
         self.transport.headers = {"Authorization": f"Bearer {self.access_token}"}
 
-    async def _verify_email(self, token: str, code: Union[str, int]) -> None:
-        """Handles email verification"""
+    async def _verify(self, token: str, code: Union[str, int]) -> None:
+        """Handles email/SMS verification"""
         async with self.session.post(
             f"{api_url}/verify",
             json={
@@ -109,14 +110,16 @@ class Whatnot:
                     data["access_token"], data["user_id"]
                 )
 
-            if verification_method == "email":
+            if verification_method in ("email", "sms"):
+                type_ = {"email": "Email", "sms": "SMS"}[verification_method]
+
                 if not interaction:
-                    raise AuthenticationError("Email verification required")
+                    raise AuthenticationError(f"{type_} verification required")
 
-                i = input("Email verification required. Enter code: ")
-
-                await self._verify_email(data["verification_token"], i)
+                i = input(f"{type_} verification required. Enter code: ")
+                await self._verify(data["verification_token"], i)
             else:
+                print(data)
                 raise NotImplementedError(
                     f"Unimplemented verification method: {data.get('verification_method')}"
                 )
@@ -145,13 +148,37 @@ class Whatnot:
     """Account Info"""
 
     @login_required
-    async def me(self) -> dict:
-        pass
+    async def get_account_info(self) -> dict:
+        """Get your account information"""
+        query = (
+            """
+                query GetAccountInfo {
+                """
+            + queries.ME_QUERY
+            + "}"
+        )
+
+        return AccountInfo((await self._req(query))["me"])
+
+    @login_required
+    async def get_default_payment(self) -> dict:
+        """Get your default payment information"""
+        query = (
+            """
+                query GetPaymentInfo {
+                """
+            + queries.ME_PAYMENT_QUERY
+            + "}"
+        )
+
+        resp = (await self._req(query))["userDefaultPayment"]
+
+        return PaymentInfo(resp) if resp else None
 
     """Users"""
 
     async def get_user_id(self, username: str) -> dict:
-        """Get a user's id by their username (requires beautifulsoup4)"""
+        """Get a user's id by their username"""
         return (await self.get_user(username)).id
 
     async def get_user(self, username: str) -> dict:
@@ -166,7 +193,6 @@ class Whatnot:
         )
 
         result = (await self._req(query, {"username": username}))["getUser"]
-        result.update({"id": b64decode(result["id"]).decode("utf-8").split(":", 1)[1]})
         return User(result)
 
     async def get_user_by_id(self, id_: str) -> dict:
@@ -181,7 +207,6 @@ class Whatnot:
         )
 
         result = (await self._req(query, {"id": id_}))["getUser"]
-        result.update({"id": b64decode(result["id"]).decode("utf-8").split(":", 1)[1]})
         return User(result)
 
     async def get_user_lives(self, user_id: str, first: int = 6) -> list:

@@ -51,3 +51,62 @@ LIVE_QUERY = (
     isHiddenBySeller
     """
 )
+
+ME_QUERY = """
+me {
+    id
+    bio
+    email
+    firstName
+    lastName
+    sellerApproved
+    canGoLive
+    salesTaxExempt
+    username
+    directMessagingDisabled
+    shippingLabelFormat
+    defaultCard {
+      customerReference
+      cardMetadata
+    }
+    defaultShippingAddress {
+      fullName
+      postalCode
+      line1
+      line2
+      city
+      state
+    }
+    homeAddress {
+      fullName
+      postalCode
+      line1
+      line2
+      city
+      state
+    }
+    walletEntries {
+        address
+        chainType
+    }
+}
+"""
+
+ME_PAYMENT_QUERY = """
+userDefaultPayment {
+    customerReference
+    cardMetadata
+    cardReference
+    billingAddress {
+        postalCode
+        line1
+        line2
+        city
+        state
+    }
+    cardDescription
+    cardType
+    createdAt
+    gateway
+}
+"""
