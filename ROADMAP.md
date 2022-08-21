@@ -37,4 +37,6 @@
 
 ## Enhancements
 
+- [ ] Ratelimit prevention
+
 ...

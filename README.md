@@ -1,6 +1,6 @@
 # Whatnot API
 
-Very early work-in-progress asynchronous API wrapper for and documentation of the [Whatnot](https://www.whatnot.com) API.
+Work-in-progress unofficial asynchronous API wrapper for [Whatnot](https://www.whatnot.com) API.
 
 ## Download
 
@@ -22,15 +22,15 @@ async def main():
 
         # Get the whatnot account
         whatnot_user = await whatnot.get_user("whatnot")
-        # OR
-        # whatnot_user = await whatnot.get_user_by_id("21123")
+        print(whatnot_user.username)
+        # OR await whatnot.get_user_by_id("21123")
 
         # Get user's lives
         lives = await whatnot.get_user_lives(whatnot_user.id)
 
         # Print out all of the lives
-        for l in [live.id for live in lives]:
-            print(l)
+        for live in lives:
+            print(live.title)
 
 
 asyncio.run(main())
