@@ -15,4 +15,7 @@ class LiveStatuses(Enum):
 
 
 def decode_id(id_: str) -> int:
+    if id_.isdigit():
+        return id_
+
     return b64decode(id_).decode("utf-8").split(":", 1)[1]

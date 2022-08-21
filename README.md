@@ -2,19 +2,13 @@
 
 Very early work-in-progress asynchronous API wrapper for and documentation of the [Whatnot](https://www.whatnot.com) API.
 
-## Roadmap
-
-- [x] Authentication
-- [x] Get user's livestreams
-- [x] Get a livestream
-- [ ] Get user by ID
-- [x] Get user by username
-- [ ] Get account information
-- [ ] Get Explore/Recommendations/Saved Streams/etc
-
 ## Download
 
 `poetry add whatnot` *or* `pip install whatnot`
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md)
 
 ## Example
 

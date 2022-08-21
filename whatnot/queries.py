@@ -66,24 +66,24 @@ me {
     directMessagingDisabled
     shippingLabelFormat
     defaultCard {
-      customerReference
-      cardMetadata
+        customerReference
+        cardMetadata
     }
     defaultShippingAddress {
-      fullName
-      postalCode
-      line1
-      line2
-      city
-      state
+        fullName
+        postalCode
+        line1
+        line2
+        city
+        state
     }
     homeAddress {
-      fullName
-      postalCode
-      line1
-      line2
-      city
-      state
+        fullName
+        postalCode
+        line1
+        line2
+        city
+        state
     }
     walletEntries {
         address
@@ -110,3 +110,69 @@ userDefaultPayment {
     gateway
 }
 """
+
+FDR_YOU_QUERY = (
+    """
+forYou {
+    id
+    title
+    sections {
+        totalCount
+        edges {
+            node {
+                id
+                title
+                sectionStyle
+                sectionContentStyle
+                feed {
+                    title
+                    id
+                }
+                contents {
+                    pageInfo {
+                        startCursor
+                        endCursor
+                        hasNextPage
+                        hasPreviousPage
+                    }
+                    edges {
+                        cursor
+                        node {
+                        ... on CategoryNode {
+                        id
+                        type
+                        label
+                        isFollowing
+                        feed {
+                            id
+                        }
+                        subcategories {
+                            id
+                            type
+                            label
+                            isFollowing
+                            feed {
+                                id
+                            }
+                        }
+                    }
+                ... on LiveStream {
+"""
+    + LIVE_QUERY
+    + """
+                }
+            }
+        }
+    }
+}
+            pageInfo {
+                startCursor
+                endCursor
+                hasNextPage
+                hasPreviousPage
+            }
+        }
+    }
+}
+"""
+)

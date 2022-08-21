@@ -17,7 +17,7 @@ def login_required(func) -> callable:
     @wraps(func)
     def wrapper(self, *args, **kwargs) -> Any:
         if not (self.access_token and self.user_id):
-            raise AuthenticationError("Not logged in")
+            raise AuthenticationRequired("Not logged in")
 
         return func(self, *args, **kwargs)
 
@@ -148,7 +148,7 @@ class Whatnot:
     """Account Info"""
 
     @login_required
-    async def get_account_info(self) -> dict:
+    async def get_account_info(self) -> AccountInfo:
         """Get your account information"""
         query = (
             """
@@ -161,7 +161,7 @@ class Whatnot:
         return AccountInfo((await self._req(query))["me"])
 
     @login_required
-    async def get_default_payment(self) -> dict:
+    async def get_default_payment(self) -> PaymentInfo:
         """Get your default payment information"""
         query = (
             """
@@ -177,11 +177,7 @@ class Whatnot:
 
     """Users"""
 
-    async def get_user_id(self, username: str) -> dict:
-        """Get a user's id by their username"""
-        return (await self.get_user(username)).id
-
-    async def get_user(self, username: str) -> dict:
+    async def get_user(self, username: str) -> User:
         """Get a user by their username"""
         query = (
             """
@@ -195,7 +191,7 @@ class Whatnot:
         result = (await self._req(query, {"username": username}))["getUser"]
         return User(result)
 
-    async def get_user_by_id(self, id_: str) -> dict:
+    async def get_user_by_id(self, id_: str) -> User:
         """Get a user by their id"""
         query = (
             """
@@ -209,7 +205,7 @@ class Whatnot:
         result = (await self._req(query, {"id": id_}))["getUser"]
         return User(result)
 
-    async def get_user_lives(self, user_id: str, first: int = 6) -> list:
+    async def get_user_lives(self, user_id: str, first: int = 6) -> list[LiveStream]:
         """Get a user's lives by their id"""
         query = (
             """
@@ -227,7 +223,7 @@ class Whatnot:
 
     """Lives"""
 
-    async def get_live(self, id_: str) -> dict:
+    async def get_live(self, id_: str) -> LiveStream:
         """Get a livestream by ID"""
         query = (
             """
