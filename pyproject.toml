@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "whatnot"
-version = "0.2.0b1"
+version = "0.2.0b2"
 description = "An asynchronous, unofficial Whatnot API wrapper"
 authors = ["wxllow <willow@wxllow.dev>"]
 license = "MIT"
