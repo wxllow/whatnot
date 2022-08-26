@@ -189,7 +189,7 @@ class Whatnot:
         )
 
         result = (await self._req(query, {"username": username}))["getUser"]
-        return User(result)
+        return User(result) if result else None
 
     async def get_user_by_id(self, id_: str) -> User:
         """Get a user by their id"""
@@ -203,7 +203,7 @@ class Whatnot:
         )
 
         result = (await self._req(query, {"id": id_}))["getUser"]
-        return User(result)
+        return User(result) if result else None
 
     async def get_user_lives(self, user_id: str, first: int = 6) -> list[LiveStream]:
         """Get a user's lives by their id"""
@@ -239,6 +239,6 @@ class Whatnot:
         )
 
         result = await self._req(query, {"id": id_, "userId": self.user_id})
-        return LiveStream(result["liveStream"])
+        return LiveStream(result["liveStream"]) if result else None
 
     """Recommendations/Saved Streams/etcs"""
