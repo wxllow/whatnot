@@ -36,6 +36,16 @@ async def main():
 asyncio.run(main())
 ```
 
+## Project Layout
+
+- whatnot
+  - exc.py - Exceptions
+  - interactive_login.py - Interactive Login Tool
+  - queries.py - Queries
+  - types.py - Types
+  - utils.py - Utilities
+  - whatnot.py - Main class
+
 ## Disclaimer
 
 This project is unofficial and is not affiliated with or endorsed by Whatnot.
