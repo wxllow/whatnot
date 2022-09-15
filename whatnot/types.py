@@ -143,9 +143,11 @@ class User(Base):
         self.can_be_messaged_by_me: bool = data["canBeMessagedByMe"]
         self.following_count: int = data["followingCount"]
         self.sold_count: int = data["soldCount"]
+            
+        self.is_based: bool = self.username.lower() in ("willow", "wxllow", "mudkip", "mudkipdev", "mesyeti", "yeti")
 
     def __repr__(self) -> str:
-        return f"<User {self.username!r}>"
+        return f"<User {self.username!r} is_based={str(self.is_based)}>"
 
 
 class CategoryNode(Base):
