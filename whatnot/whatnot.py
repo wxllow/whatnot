@@ -27,7 +27,18 @@ def login_required(func) -> callable:
 class Whatnot:
     def __init__(self) -> None:
         # GQL client
-        self.transport = AIOHTTPTransport(url=gql_url)
+        self.transport = AIOHTTPTransport(
+            url=gql_url,
+            headers={
+                "Apollographql-Client-Name": "web",
+                "Apollographql-Client-Version": "20230710-1529",
+                "Origin": "https://www.whatnot.com",
+                "Referer": "https://www.whatnot.com/",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36",
+                "X-Whatnot-App": "whatnot-web",
+                "X-Whatnot-App-Version": "20230710-1529",
+            },
+        )
         self.client = Client(
             transport=self.transport,
             fetch_schema_from_transport=False,
