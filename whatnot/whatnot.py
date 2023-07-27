@@ -102,9 +102,10 @@ class Whatnot:
         async with self.session.post(
             f"{api_url}/login",
             json={
-                # "device_id": "aea87c97-aaba-4426-ae44-d3db92e188d9", # Don't know what this is exactly, but the API doesn't seem to care
                 "username": username,
                 "password": password,
+                "device_id": "aea87c97-aaba-4426-ae44-d3db92e188d9",  # Don't know what this is exactly, but the API doesn't seem to care
+                "app_type": "WEB_DESKTOP",
             },
         ) as resp:
             if resp.status == 400:
