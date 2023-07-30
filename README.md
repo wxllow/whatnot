@@ -2,6 +2,8 @@
 
 Work-in-progress unofficial asynchronous API wrapper for [Whatnot](https://www.whatnot.com) API.
 
+***Currently, authorized actions are currently broken due to API changes, however, most of the project is still usable***
+
 ## Download
 
 `poetry add whatnot` *or* `pip install whatnot`
@@ -18,8 +20,6 @@ from whatnot import Whatnot
 
 async def main():
     async with Whatnot() as whatnot:
-        whatnot.login("bob@example.com", "secret_password")
-
         # Get the whatnot account
         whatnot_user = await whatnot.get_user("whatnot")
         print(whatnot_user.username)

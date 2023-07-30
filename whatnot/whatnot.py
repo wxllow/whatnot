@@ -1,6 +1,8 @@
 import json
 from functools import wraps
 from typing import Any, Union
+from uuid import uuid4
+import time
 
 import aiohttp
 from gql import Client, gql
@@ -16,7 +18,7 @@ from .utils import *
 def login_required(func) -> callable:
     @wraps(func)
     def wrapper(self, *args, **kwargs) -> Any:
-        if not (self.access_token and self.user_id):
+        if not (self.access_data):
             raise AuthenticationRequired("Not logged in")
 
         return func(self, *args, **kwargs)
@@ -26,19 +28,22 @@ def login_required(func) -> callable:
 
 class Whatnot:
     def __init__(self) -> None:
+        HEADERS = {
+            "Apollographql-Client-Name": "web",
+            "Apollographql-Client-Version": "20230710-1529",
+            "Origin": "https://www.whatnot.com",
+            "Referer": "https://www.whatnot.com/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36",
+            "X-Whatnot-App": "whatnot-web",
+            "X-Whatnot-App-Version": "20230710-1529",
+        }
+
         # GQL client
         self.transport = AIOHTTPTransport(
             url=gql_url,
-            headers={
-                "Apollographql-Client-Name": "web",
-                "Apollographql-Client-Version": "20230710-1529",
-                "Origin": "https://www.whatnot.com",
-                "Referer": "https://www.whatnot.com/",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36",
-                "X-Whatnot-App": "whatnot-web",
-                "X-Whatnot-App-Version": "20230710-1529",
-            },
+            headers=HEADERS
         )
+        
         self.client = Client(
             transport=self.transport,
             fetch_schema_from_transport=False,
@@ -46,13 +51,10 @@ class Whatnot:
 
         # HTTP session
         self.session = aiohttp.ClientSession(
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36"
-            }
+            headers=HEADERS,
         )
 
-        self.access_token = None
-        self.user_id = None
+        self.access_data = None
 
     async def __aenter__(self) -> "Whatnot":
         """Enter the context manager"""
@@ -67,25 +69,67 @@ class Whatnot:
 
     async def _req(self, query: str, variables: Optional[dict] = None) -> dict:
         """Make a request to the GraphQL endpoint"""
-        return await self.client.execute_async(gql(query), variable_values=variables)
+        # --- NOT WORKING CURRENTLY ---
+        # # If logged in, check if the access token is expired
+        # if self.access_data:
+        #     if self.access_data["access_token"]["expires_at"] <= time.time():
+        #         # Refresh the access token
+        #         async with aiohttp.ClientSession(
+        #             headers=self.HEADERS,
+        #             cookies={
+        #                 "accessToken": self.access_data["access_token"]["token"],
+        #                 "refreshToken": self.access_data["refresh_token"]["token"],
+        #                 "accessTokenExpires": self.access_data["refresh_token"]["expires_at"],
+        #             }
+        #         ) as session:
+        #             async with session.post(
+        #                 f"{api_url}/refresh",
+        #                 json={},
+        #                 headers={
+        #                     **session.headers,
+        #                     "Authorization": f"Bearer {self.access_data['refresh_token']['token']}"
+        #                 },
+        #             ) as resp:
+        #                 print(await resp.json())
+        #                 resp.raise_for_status()
+        #                 data = await resp.json()
+        #                 await self.login_with_access_data(data)
+
+        #     # Add the access token to the headers
+        #     self.session.headers[
+        #         "Authorization"
+        #     ] = f"Bearer {self.access_data['access_token']['token']}"
+
+        return await self.client.execute_async(
+            gql(query), variable_values=variables
+        )
 
     def __repr__(self) -> str:
-        return f"<Whatnot user_id={self.user_id!r})>"
+        return f"<Whatnot user_id={self.access_data['user_id']!r})>"
 
     """Authentication"""
 
-    async def login_with_access_token(self, access_token: str, user_id: str) -> None:
+    async def login_with_access_data(self, access_data: dict) -> None:
         """Login using an access token"""
-        self.access_token = access_token
-        self.user_id = user_id
-        self.transport.headers = {"Authorization": f"Bearer {self.access_token}"}
+        # Add expires_at times if they don't exist
+        if not access_data["access_token"].get("expires_at"):
+            access_data["access_token"]["expires_at"] = (
+                int(time.time()) + access_data["access_token"]["expires_in"] - 5
+            )
 
-    async def _verify(self, token: str, code: Union[str, int]) -> None:
+        if not access_data["refresh_token"].get("expires_at"):
+            access_data["refresh_token"]["expires_at"] = (
+                int(time.time()) + access_data["refresh_token"]["expires_in"] - 5
+            )
+
+        self.access_data = access_data
+
+    async def _verify(self, token: str, code: Union[str, int], device_id: str) -> None:
         """Handles email/SMS verification"""
         async with self.session.post(
             f"{api_url}/verify",
             json={
-                # wants device_id too
+                "device_id": device_id,
                 "code": code,
                 "verification_token": token,
             },
@@ -93,18 +137,21 @@ class Whatnot:
             resp.raise_for_status()
             data = await resp.json()
 
-            await self.login_with_access_token(data["access_token"], data["user_id"])
+            await self.login_with_access_data(data)
 
     async def login(
         self, username: str, password: str, interaction: bool = False
     ) -> None:
         """Log in using a email and password"""
+        device_id = str(uuid4())
+
         async with self.session.post(
             f"{api_url}/login",
             json={
-                # "device_id": "aea87c97-aaba-4426-ae44-d3db92e188d9", # Don't know what this is exactly, but the API doesn't seem to care
-                "username": username,
+                "device_id": device_id,
+                "email": username,
                 "password": password,
+                "app_type": "WEB_MOBILE",  # or WEB_DESKTOP
             },
         ) as resp:
             if resp.status == 400:
@@ -117,9 +164,7 @@ class Whatnot:
             verification_method = data.get("verification_method")
 
             if not verification_method:
-                return await self.login_with_access_token(
-                    data["access_token"], data["user_id"]
-                )
+                return await self.login_with_access_data(data)
 
             if verification_method in ("email", "sms"):
                 type_ = {"email": "Email", "sms": "SMS"}[verification_method]
@@ -128,9 +173,8 @@ class Whatnot:
                     raise AuthenticationError(f"{type_} verification required")
 
                 i = input(f"{type_} verification required. Enter code: ")
-                await self._verify(data["verification_token"], i)
+                await self._verify(data["verification_token"], i, device_id)
             else:
-                print(data)
                 raise NotImplementedError(
                     f"Unimplemented verification method: {data.get('verification_method')}"
                 )
@@ -140,36 +184,39 @@ class Whatnot:
         with open("session.json", "r") as f:
             data = json.load(f)
 
-            self.access_token = data["access_token"]
-            self.user_id = data["user_id"]
-
-        self.transport.headers = {"Authorization": f"Bearer {self.access_token}"}
+            await self.login_with_access_data(data)
 
     async def save_session(self) -> None:
         """Save the session to 2 files: session.json and cookie_jar.pickle"""
         with open("session.json", "w") as f:
-            json.dump(
-                {
-                    "access_token": self.access_token,
-                    "user_id": self.user_id,
-                },
-                f,
-            )
+            json.dump(self.access_data, f)
 
     """Account Info"""
 
     @login_required
     async def get_account_info(self) -> AccountInfo:
         """Get your account information"""
-        query = (
-            """
-                query GetAccountInfo {
-                """
-            + queries.ME_QUERY
-            + "}"
-        )
+        # query = (
+        #     """
+        #         query UserInfo {
+        #         """
+        #     + queries.ME_QUERY
+        #     + "}"
+        # )
 
-        return AccountInfo((await self._req(query))["me"])
+        query = "query UserInfo {\n  me {\n    id\n    bio\n    email\n    phoneNumber\n    firstName\n    lastName\n    displayName\n    canGoLive\n    salesTaxExempt\n    username\n    directMessagingDisabled\n    hasMarketplaceAccess\n    sellerProfileClipsHidden\n    sellerProfileVodsHidden\n    activityStatusEnabled\n    shippingLabelFormat\n    profileImage {\n      id\n      bucket\n      key\n      __typename\n    }\n    defaultCard {\n      customerReference\n      cardMetadata\n      __typename\n    }\n    defaultShippingAddress {\n      fullName\n      postalCode\n      line1\n      line2\n      city\n      state\n      countryCode\n      __typename\n    }\n    homeAddress {\n      fullName\n      postalCode\n      line1\n      line2\n      city\n      state\n      countryCode\n      __typename\n    }\n    walletEntries {\n      address\n      chainType\n      __typename\n    }\n    __typename\n  }\n}"
+
+        print(
+            await self._req(
+                query,
+                {
+
+
+
+                },
+            )
+        )
+        return (await self._req(query))["me"]
 
     @login_required
     async def get_default_payment(self) -> PaymentInfo:
@@ -249,7 +296,7 @@ class Whatnot:
             + "}"
         )
 
-        result = await self._req(query, {"id": id_, "userId": self.user_id})
+        result = await self._req(query, {"id": id_})
         return LiveStream(result["liveStream"]) if result else None
 
     """Recommendations/Saved Streams/etcs"""
