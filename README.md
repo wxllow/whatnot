@@ -2,7 +2,7 @@
 
 Work-in-progress unofficial asynchronous API wrapper for [Whatnot](https://www.whatnot.com) API.
 
-***Currently, authorized actions are currently broken due to API changes, however, most of the project is still usable***
+***Currently, authorized actions are currently broken due to API changes, however, most of the project is still usable. If you would like to help fix it, please contribute :)***
 
 ## Download
 
