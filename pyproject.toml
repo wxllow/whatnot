@@ -25,7 +25,7 @@ aiohttp = "^3.8.4"
 gql = "^3.4.1"
 
 [tool.poetry.dev-dependencies]
-black = {version = "^22.6.0", allow-prereleases = true}
+black = {version = "^24.3.0", allow-prereleases = true}
 pre-commit = "^2.21.0"
 
 [build-system]
